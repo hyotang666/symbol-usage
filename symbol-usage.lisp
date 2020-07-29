@@ -133,7 +133,9 @@
                    (incf (gethash leaf table)))))))
     (with-open-file (s pathname :if-does-not-exist nil)
       (when s
-        (loop :for sexp = (read-as-string:read-as-string s nil)
+        (loop :for sexp
+                   = (let ((read-as-string:*muffle-reader-error* t))
+                       (read-as-string:read-as-string s nil))
               :while sexp
               :when (string= "" sexp)
                 :do (loop-finish)
