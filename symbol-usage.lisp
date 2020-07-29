@@ -1,6 +1,5 @@
 (defpackage :symbol-usage
   (:use :cl)
-  (:import-from :type-ext #:prototype #:define-simple-type)
   (:import-from :read-as-string #:read-as-string)
   (:import-from :null-package #:read-with-null-package #:*only-junk-p*)
   (:import-from :trestrul #:dotree #:nmapleaf)
@@ -30,12 +29,7 @@
              table))
     (output (analyzed (table-of system)) (file))))
 
-(deftype system-name () 'string)
-
-(define-simple-type (system-names (:element-type system-name)
-                     (:element-predicate stringp)))
-
-(prototype target-systems (keyword) system-names)
+(declaim (ftype (function (keyword) (values list &optional)) target-systems))
 
 (defun target-systems (system)
   (labels ((installed-systems ()
@@ -69,7 +63,9 @@
   (let ((table (make-hash-table :test #'eq)) (package (ensure-package system)))
     (do-external-symbols (s package table) (setf (gethash s table) 0))))
 
-(prototype analyze-system (system-name hash-table) hash-table)
+(declaim
+ (ftype (function (system-name hash-table) (values hash-table &optional))
+        analyze-system))
 
 (defun analyze-system (system table)
   (labels ((system-components (system)

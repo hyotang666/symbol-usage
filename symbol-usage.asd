@@ -1,7 +1,7 @@
 ;; vim: ft=lisp et
 (in-package :asdf)
 (defsystem :symbol-usage
-  :version "0.0.1"
+  :version "0.0.2"
   :depends-on
   (
    "alexandria"         ; public domain utilities.
@@ -12,6 +12,5 @@
    "null-package"       ; package which read symbol as uninterned one.
    "uiop"               ; utilities.
    "named-readtables"   ; manage readtabls.
-   "type-ext"           ; type extensions.
    )
   :components((:file "symbol-usage")))
