@@ -44,7 +44,8 @@
              (search "test" system)))
     (if (eq :cl system)
         (installed-systems)
-        (ql:who-depends-on (asdf:coerce-name system)))))
+        (remove-if #'test-system-p
+                   (ql:who-depends-on (asdf:coerce-name system))))))
 
 (defun ensure-package (system)
   ;; FIXME: some system has different package-name.
