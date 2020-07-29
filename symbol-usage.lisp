@@ -1,8 +1,5 @@
 (defpackage :symbol-usage
   (:use :cl)
-  (:import-from :read-as-string #:read-as-string)
-  (:import-from :null-package #:read-with-null-package #:*only-junk-p*)
-  (:import-from :trestrul #:dotree #:nmapleaf)
   (:export #:analyze))
 
 (in-package :symbol-usage)
@@ -86,7 +83,7 @@
              (typep component 'asdf:cl-source-file)))
     (dolist (component (system-components system) table)
       (when (cl-source-file-p component)
-        (let ((*only-junk-p* t))
+        (let ((null-package:*only-junk-p* t))
           (analyze-file (asdf:component-pathname component) table))))))
 
 (defparameter *debug* nil)
@@ -102,7 +99,7 @@
                    (let ((sexp (read-from-string sexp-notation nil)))
                      #+sbcl
                      (setf sexp
-                             (nmapleaf
+                             (trestrul:nmapleaf
                                (lambda (x)
                                  (if (sb-int:comma-p x)
                                      (sb-int:comma-expr x)
@@ -124,18 +121,18 @@
                  (cerror format-control "Treat as NIL."))))
            (re-read (string)
              (with-input-from-string (s string)
-               (handler-case (read-with-null-package s)
+               (handler-case (null-package:read-with-null-package s)
                  (error (c)
                    (setf *debug* string) (ensure-cerror c)))))
            (analyze-sexp (sexp)
              ;; FIXME: Currently we never found `NIL`, because it is node.
              (when (listp sexp)
-               (dotree (leaf sexp)
+               (trestrul:dotree (leaf sexp)
                  (when (gethash leaf table)
                    (incf (gethash leaf table)))))))
     (with-open-file (s pathname :if-does-not-exist nil)
       (when s
-        (loop :for sexp = (read-as-string s nil)
+        (loop :for sexp = (read-as-string:read-as-string s nil)
               :while sexp
               :when (string= "" sexp)
                 :do (loop-finish)
