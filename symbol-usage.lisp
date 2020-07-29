@@ -23,7 +23,7 @@
                               :if-exists :supersede
                               :if-does-not-exist :create)
                (print-result table))
-             table))
+             (values table file)))
     (output (analyzed (table-of system)) (file))))
 
 (declaim (ftype (function (keyword) (values list &optional)) target-systems))
