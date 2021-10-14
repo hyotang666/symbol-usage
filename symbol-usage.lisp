@@ -4,6 +4,8 @@
 
 (in-package :symbol-usage)
 
+(declaim (optimize speed))
+
 (defun ensure-package (system)
   ;; FIXME: some system has different package-name.
   (or (find-package system)
@@ -34,6 +36,10 @@
                  (delete-test rest (push system acc))))
            (test-system-p (system)
              (search "test" system)))
+    (declare
+      (ftype (function (simple-string)
+              (values (or null (mod #.array-total-size-limit)) &optional))
+             test-system-p))
     (if (eq :cl system)
         (installed-systems)
         (remove-if #'test-system-p
@@ -46,10 +52,6 @@
 (defparameter *debug* nil)
 
 (defparameter *verbose* nil)
-
-(declaim
- (ftype (function (system-name hash-table) (values hash-table &optional))
-        analyze-system))
 
 (defun analyze-file (pathname table)
   (print pathname)
@@ -74,6 +76,7 @@
                (error (c)
                  (format *error-output* "~A~&~S" c pathname))))
            (ensure-cerror (c)
+             (declare (optimize (speed 1))) ; due to control string is dynamic.
              (let ((format-control
                     (handler-case (format nil (princ-to-string c))
                       (error ()
@@ -91,18 +94,24 @@
              (when (listp sexp)
                (trestrul:dotree (leaf sexp)
                  (when (gethash leaf table)
-                   (incf (gethash leaf table)))))))
+                   (incf
+                    (the (mod #.most-positive-fixnum)
+                         (gethash leaf table))))))))
     (with-open-file (s pathname :if-does-not-exist nil)
       (when s
         (loop :for sexp
                    = (let ((read-as-string:*muffle-reader-error* t))
                        (read-as-string:read-as-string s nil))
               :while sexp
-              :when (string= "" sexp)
+              :when (equal "" sexp)
                 :do (loop-finish)
               :else
                 :do (analyze-sexp (read-sexp sexp))))
       table)))
+
+(declaim
+ (ftype (function (system-name hash-table) (values hash-table &optional))
+        analyze-system))
 
 (defun analyze-system (system table)
   (labels ((system-components (system)
@@ -137,18 +146,46 @@
                        (mapcar #'car temp))))
            (body (first rest temp rank)
              (if (same-rank-p first (car rest))
-                 (rec rest (push first temp) rank)
+                 (rec rest (cons first temp) rank)
                  (do-print rank first temp rest)))
            (same-rank-p (cons1 cons2)
              (eql (cdr cons1) (cdr cons2)))
            (do-print (rank first temp rest)
              (format t "~3@S | ~4@S |~{~A~^ ~}~%" rank (cdr first)
-                     (mapcar #'car (push first temp)))
+                     (mapcar #'car (cons first temp)))
              (when (zerop (mod rank 10))
                (format t "~80,,,'-A~%" #\-))
              (rec rest nil (1+ rank)))
            (sort-result (table)
-             (sort (alexandria:hash-table-alist table) #'> :key #'cdr)))
+             (sort (the list (alexandria:hash-table-alist table)) #'>
+                   :key #'cdr)))
+    (declare
+      (ftype (function (hash-table)
+              (values list ; of-type (symbol . (mod #.most-positive-fixnum))
+                      &optional))
+             sort-result)
+      (ftype (function
+              (list ; of-type (symbol . (mod #.most-positive-fixnum))
+                    list ; of-type (symbol . (mod #.most-positive-fixnum))
+                    (mod #.most-positive-fixnum))
+              (values null &optional))
+             rec)
+      (ftype (function
+              (list ; of-type (symbol . (mod #.most-positive-fixnum))
+                    (mod #.most-positive-fixnum))
+              (values null &optional))
+             epilogue)
+      (ftype (function (cons list list (mod #.most-positive-fixnum))
+              (values null &optional))
+             body)
+      (ftype (function
+              ((cons symbol (mod #.most-positive-fixnum))
+               (cons symbol (mod #.most-positive-fixnum)))
+              (values boolean &optional))
+             same-rank-p)
+      (ftype (function ((mod #.most-positive-fixnum) cons list list)
+              (values null &optional))
+             do-print))
     (rec (sort-result table) nil 1)))
 
 ;;;; In order to debug, return value is hash-table.
