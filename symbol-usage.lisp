@@ -192,8 +192,8 @@
 
 (defun analyze (&optional (system :cl))
   (labels ((file ()
-             (uiop:merge-pathnames* (format nil "~(~A~)-symbol-usage" system)
-                                    (user-homedir-pathname)))
+             (merge-pathnames (format nil "~(~A~)-symbol-usage" system)
+                              (user-homedir-pathname)))
            (analyzed (table)
              (let ((*package* (ensure-package (ensure-system system))))
                (dolist (s (target-systems system) table)

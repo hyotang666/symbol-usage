@@ -7,7 +7,6 @@
    "alexandria"         ; Utilities implicitly depends on via eclector.
    "trestrul"           ; Utilities for tree structured list.
    "read-as-string"     ; S-Expression string reader.
-   "uiop"               ; utilities.
    "asdf"               ; System builder.
    "quicklisp"          ; Package managing tools.
    "eclector"           ; Package which read symbol as uninterned one.
