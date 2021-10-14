@@ -4,13 +4,13 @@
   :version "0.0.10"
   :depends-on
   (
-   "alexandria"         ; public domain utilities.
+   "alexandria"         ; Utilities implicitly depends on via eclector.
+   "trestrul"           ; Utilities for tree structured list.
    "read-as-string"     ; S-Expression string reader.
-   "trestrul"           ; utilities for tree structured list.
-   "asdf"               ; system definition facilities.
-   "quicklisp"          ; package managing tools.
-   "eclector"           ; package which read symbol as uninterned one.
    "uiop"               ; utilities.
-   "named-readtables"   ; manage readtabls.
+   "asdf"               ; System builder.
+   "quicklisp"          ; Package managing tools.
+   "eclector"           ; Package which read symbol as uninterned one.
+   "named-readtables"   ; Readtable manager.
    )
   :components((:file "symbol-usage")))
