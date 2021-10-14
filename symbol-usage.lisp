@@ -4,27 +4,13 @@
 
 (in-package :symbol-usage)
 
-;;;; In order to debug, return value is hash-table.
-
-(defun analyze (&optional (system :cl))
-  (labels ((file ()
-             (uiop:merge-pathnames* (format nil "~(~A~)-symbol-usage" system)
-                                    (user-homedir-pathname)))
-           (analyzed (table)
-             (let ((*package* (ensure-package (ensure-system system))))
-               (dolist (s (target-systems system) table)
-                 (analyze-system s table))))
-           (ensure-system (system)
-             (if (eq :cl system)
-                 :cl-user
-                 system))
-           (output (table file)
-             (with-open-file (*standard-output* file :direction :output
-                              :if-exists :supersede
-                              :if-does-not-exist :create)
-               (print-result table))
-             (values table file)))
-    (output (analyzed (table-of system)) (file))))
+(defun ensure-package (system)
+  ;; FIXME: some system has different package-name.
+  (or (find-package system)
+      (find-package (car (ql:quickload system)))
+      (error
+        "Package ~S is not found.~%Typo? or system ~:*~S may have different package name."
+        system)))
 
 (deftype system-name () 'string)
 
@@ -53,49 +39,17 @@
         (remove-if #'test-system-p
                    (ql:who-depends-on (asdf:coerce-name system))))))
 
-(defun ensure-package (system)
-  ;; FIXME: some system has different package-name.
-  (or (find-package system)
-      (find-package (car (ql:quickload system)))
-      (error
-        "Package ~S is not found.~%Typo? or system ~:*~S may have different package name."
-        system)))
-
-;;;; In order to debug `ANALYZE-SYSTEM` and `PRINT-RESULT`, this is global.
-
 (defun table-of (&optional (system :cl))
   (let ((table (make-hash-table :test #'eq)) (package (ensure-package system)))
     (do-external-symbols (s package table) (setf (gethash s table) 0))))
 
-(declaim
- (ftype (function (system-name hash-table) (values hash-table &optional))
-        analyze-system))
-
-(defun analyze-system (system table)
-  (labels ((system-components (system)
-             (handler-case (asdf:required-components (asdf:find-system system))
-               ((or asdf:missing-component asdf:missing-dependency) (c)
-                 (ensure-warn c))
-               (named-readtables:readtable-does-not-exist ())
-               (error (c)
-                 (let ((restart (find-restart 'skip)))
-                   (if restart
-                       (invoke-restart restart)
-                       (ensure-warn c))))))
-           (ensure-warn (thing)
-             (handler-case (warn (princ-to-string thing))
-               (error ()
-                 (warn (prin1-to-string thing)))))
-           (cl-source-file-p (component)
-             (typep component 'asdf:cl-source-file)))
-    (dolist (component (system-components system) table)
-      (when (cl-source-file-p component)
-        (let ((null-package:*only-junk-p* t))
-          (analyze-file (asdf:component-pathname component) table))))))
-
 (defparameter *debug* nil)
 
 (defparameter *verbose* nil)
+
+(declaim
+ (ftype (function (system-name hash-table) (values hash-table &optional))
+        analyze-system))
 
 (defun analyze-file (pathname table)
   (print pathname)
@@ -130,7 +84,8 @@
              (with-input-from-string (s string)
                (handler-case (null-package:read-with-null-package s)
                  (error (c)
-                   (setf *debug* string) (ensure-cerror c)))))
+                   (setf *debug* string)
+                   (ensure-cerror c)))))
            (analyze-sexp (sexp)
              ;; FIXME: Currently we never found `NIL`, because it is node.
              (when (listp sexp)
@@ -148,6 +103,28 @@
               :else
                 :do (analyze-sexp (read-sexp sexp))))
       table)))
+
+(defun analyze-system (system table)
+  (labels ((system-components (system)
+             (handler-case (asdf:required-components (asdf:find-system system))
+               ((or asdf:missing-component asdf:missing-dependency) (c)
+                 (ensure-warn c))
+               (named-readtables:readtable-does-not-exist ())
+               (error (c)
+                 (let ((restart (find-restart 'skip)))
+                   (if restart
+                       (invoke-restart restart)
+                       (ensure-warn c))))))
+           (ensure-warn (thing)
+             (handler-case (warn (princ-to-string thing))
+               (error ()
+                 (warn (prin1-to-string thing)))))
+           (cl-source-file-p (component)
+             (typep component 'asdf:cl-source-file)))
+    (dolist (component (system-components system) table)
+      (when (cl-source-file-p component)
+        (let ((null-package:*only-junk-p* t))
+          (analyze-file (asdf:component-pathname component) table))))))
 
 (defun print-result (table)
   (labels ((rec (list temp rank)
@@ -174,6 +151,29 @@
              (sort (alexandria:hash-table-alist table) #'> :key #'cdr)))
     (rec (sort-result table) nil 1)))
 
+;;;; In order to debug, return value is hash-table.
+
+(defun analyze (&optional (system :cl))
+  (labels ((file ()
+             (uiop:merge-pathnames* (format nil "~(~A~)-symbol-usage" system)
+                                    (user-homedir-pathname)))
+           (analyzed (table)
+             (let ((*package* (ensure-package (ensure-system system))))
+               (dolist (s (target-systems system) table)
+                 (analyze-system s table))))
+           (ensure-system (system)
+             (if (eq :cl system)
+                 :cl-user
+                 system))
+           (output (table file)
+             (with-open-file (*standard-output* file :direction :output
+                              :if-exists :supersede
+                              :if-does-not-exist :create)
+               (print-result table))
+             (values table file)))
+    (output (analyzed (table-of system)) (file))))
+
+;;;; In order to debug `ANALYZE-SYSTEM` and `PRINT-RESULT`, this is global.
 ;;;; for dubug use
 
 #++
