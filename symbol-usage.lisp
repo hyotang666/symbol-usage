@@ -26,7 +26,13 @@
              (values table file)))
     (output (analyzed (table-of system)) (file))))
 
-(declaim (ftype (function (keyword) (values list &optional)) target-systems))
+(deftype system-name () 'string)
+
+(declaim
+ (ftype (function (keyword)
+         (values list ; of-type system-name
+                 &optional))
+        target-systems))
 
 (defun target-systems (system)
   (labels ((installed-systems ()

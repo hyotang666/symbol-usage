@@ -1,7 +1,7 @@
 ;; vim: ft=lisp et
 (in-package :asdf)
 (defsystem :symbol-usage
-  :version "0.0.6"
+  :version "0.0.7"
   :depends-on
   (
    "alexandria"         ; public domain utilities.
