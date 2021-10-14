@@ -84,11 +84,12 @@
                (when *verbose*
                  (cerror format-control "Treat as NIL."))))
            (re-read (string)
-             (with-input-from-string (s string)
-               (handler-case (null-package:read-with-null-package s)
-                 (error (c)
-                   (setf *debug* string)
-                   (ensure-cerror c)))))
+             (handler-case
+                 (handler-bind ((error #'eclector.reader:recover))
+                   (eclector.reader:read-from-string string))
+               (error (c)
+                 (setf *debug* string)
+                 (ensure-cerror c))))
            (analyze-sexp (sexp)
              ;; FIXME: Currently we never found `NIL`, because it is node.
              (when (listp sexp)
@@ -132,8 +133,7 @@
              (typep component 'asdf:cl-source-file)))
     (dolist (component (system-components system) table)
       (when (cl-source-file-p component)
-        (let ((null-package:*only-junk-p* t))
-          (analyze-file (asdf:component-pathname component) table))))))
+        (analyze-file (asdf:component-pathname component) table)))))
 
 (defun print-result (table)
   (labels ((rec (list temp rank)
