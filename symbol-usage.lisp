@@ -133,7 +133,9 @@
              (typep component 'asdf:cl-source-file)))
     (dolist (component (system-components system) table)
       (when (cl-source-file-p component)
-        (analyze-file (asdf:component-pathname component) table)))))
+        (handler-case (analyze-file (asdf:component-pathname component) table)
+          (condition (c)
+            (warn (princ-to-string c))))))))
 
 (defun print-result (table)
   (labels ((rec (list temp rank)
@@ -167,7 +169,7 @@
       (ftype (function
               (list ; of-type (symbol . (mod #.most-positive-fixnum))
                     list ; of-type (symbol . (mod #.most-positive-fixnum))
-                    (mod #.most-positive-fixnum))
+                    (integer 1 #.most-positive-fixnum))
               (values null &optional))
              rec)
       (ftype (function
@@ -175,15 +177,15 @@
                     (mod #.most-positive-fixnum))
               (values null &optional))
              epilogue)
-      (ftype (function (cons list list (mod #.most-positive-fixnum))
+      (ftype (function (cons list list (integer 1 #.most-positive-fixnum))
               (values null &optional))
              body)
       (ftype (function
               ((cons symbol (mod #.most-positive-fixnum))
-               (cons symbol (mod #.most-positive-fixnum)))
+               (or null (cons symbol (mod #.most-positive-fixnum))))
               (values boolean &optional))
              same-rank-p)
-      (ftype (function ((mod #.most-positive-fixnum) cons list list)
+      (ftype (function ((integer 1 #.most-positive-fixnum) cons list list)
               (values null &optional))
              do-print))
     (rec (sort-result table) nil 1)))

@@ -1,7 +1,7 @@
 ;; vim: ft=lisp et
 (in-package :asdf)
 (defsystem :symbol-usage
-  :version "0.0.10"
+  :version "0.0.11"
   :depends-on
   (
    "alexandria"         ; Utilities implicitly depends on via eclector.
